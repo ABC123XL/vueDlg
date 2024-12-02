@@ -1,6 +1,22 @@
-import { createApp, h, type Component } from "vue";
+import {
+  createApp,
+  h,
+  type Component,
+  createVNode,
+  createRenderer,
+  render
+} from "vue";
 import ElementPlus from "element-plus";
-// import "element-plus/dist/index.css";
+import "element-plus/dist/index.css";
+
+// 全局的 app
+const globalApp = createApp({});
+globalApp.use(ElementPlus);
+
+// 容器 DOM 节点
+const globalContainer = document.createElement("div");
+document.body.appendChild(globalContainer);
+globalApp.mount(globalContainer);
 
 // 弹窗注册表
 const dialogRegistry = new Map<string, Component>();
@@ -31,24 +47,42 @@ export const openDlg = (key: string, option: any) => {
 
   // 动态创建 DOM 容器
   const container = document.createElement("div");
-  container.className = "div-1234";
-  document.body.appendChild(container);
+  // document.body.appendChild(container);
 
   // 创建 Vue 实例
-  const app = createApp(dlgComponent, {
+  // const app = createApp(dlgComponent, {
+  //   ...option,
+  //   onClose: () => {
+  //     console.log("dlg service");
+
+  //     app.unmount();
+  //     document.body.removeChild(container);
+  //     dialogStack.pop();
+  //   }
+  // });
+  globalContainer.appendChild(container);
+
+  // 使用 createVNode 创建组件节点
+
+  const vnode = createVNode(dlgComponent, {
     ...option,
     onClose: () => {
-      console.log("dlg service");
-
-      app.unmount();
-      document.body.removeChild(container);
+      render(null, container); // 卸载组件
+      globalContainer.removeChild(container); // 清理 DOM
       dialogStack.pop();
-    },
+    }
   });
-  app.use(ElementPlus);
-  app.mount(container);
+  vnode.appContext = globalApp._context;
+
+  // 使用 render 渲染到 DOM
+  render(vnode, container);
+
+  // app.use(ElementPlus);
+  // app.mount(container);
   // 保存关闭函数栈
-  dialogStack.push({ key, close: () => app.unmount() });
+  // dialogStack.push({ key, close: () => app.unmount() });
+  // 记录到堆栈
+  dialogStack.push({ key, close: () => render(null, container) });
 };
 
 export const closeAllDialogs = () => {
